@@ -64,7 +64,7 @@ I'm a passionate developer learning to build cool things with code.
 # /portfolio command
 async def portfolio(update: Update, context):
     keyboard = [
-        [InlineKeyboardButton("🌐 Visit My Portfolio", url="https://haile199105.github.io/Portfolio1/")]
+        [InlineKeyboardButton("🌐 Visit My Portfolio", url="https://haile-portfolio-theta.vercel.app/")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
