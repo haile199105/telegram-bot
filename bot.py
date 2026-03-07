@@ -154,14 +154,14 @@ def create_cv_pdf(data):
     pdf.add_page()
     
     # Title
-    pdf.set_font('DejaVu', 'B', 16)
+    pdf.set_font('Helvetica', 'B', 16)
     pdf.cell(0, 10, f"CV for {data['job_title']}", 0, 1, 'C')
     pdf.ln(10)
     
     # Personal Info (using portfolio data)
-    pdf.set_font('DejaVu', 'B', 12)
+    pdf.set_font('Helvetica', 'B', 12)
     pdf.cell(0, 10, "Personal Information", 0, 1)
-    pdf.set_font('DejaVu', '', 11)
+    pdf.set_font('Helvetica', '', 11)
     pdf.cell(0, 10, f"Name: {portfolio_data['name']}", 0, 1)
     pdf.cell(0, 10, f"Title: {portfolio_data['title']}", 0, 1)
     pdf.cell(0, 10, f"Location: {portfolio_data['location']}", 0, 1)
@@ -172,16 +172,16 @@ def create_cv_pdf(data):
     pdf.ln(5)
     
     # Professional Summary
-    pdf.set_font('DejaVu', 'B', 12)
+    pdf.set_font('Helvetica', 'B', 12)
     pdf.cell(0, 10, "Professional Summary", 0, 1)
-    pdf.set_font('DejaVu', '', 11)
+    pdf.set_font('Helvetica', '', 11)
     pdf.multi_cell(0, 6, f"Passionate {data['job_title']} with {data['experience']} of experience. Skilled in {data['skills']} and dedicated to delivering high-quality results.")
     pdf.ln(5)
     
     # Key Qualifications
-    pdf.set_font('DejaVu', 'B', 12)
+    pdf.set_font('Helvetica', 'B', 12)
     pdf.cell(0, 10, "Key Qualifications", 0, 1)
-    pdf.set_font('DejaVu', '', 11)
+    pdf.set_font('Helvetica', '', 11)
     
     # Split requirements into bullet points (using asterisks instead of •)
     requirements_list = data['requirements'].split(',')
@@ -191,23 +191,23 @@ def create_cv_pdf(data):
     pdf.ln(5)
     
     # Technical Skills
-    pdf.set_font('DejaVu', 'B', 12)
+    pdf.set_font('Helvetica', 'B', 12)
     pdf.cell(0, 10, "Technical Skills", 0, 1)
-    pdf.set_font('DejaVu', '', 11)
+    pdf.set_font('Helvetica', '', 11)
 
     # Format skills by category from portfolio data
     for category, skills in portfolio_data['skills'].items():
-        pdf.set_font('DejaVu', 'B', 11)
+        pdf.set_font('Helvetica', 'B', 11)
         pdf.cell(0, 6, f"{category.title()}:", 0, 1)
-        pdf.set_font('DejaVu', '', 10)
+        pdf.set_font('Helvetica', '', 10)
         pdf.cell(10)  # Indent
         pdf.cell(0, 6, ", ".join(skills), 0, 1)
     pdf.ln(5)
     
     # Experience
-    pdf.set_font('DejaVu', 'B', 12)
+    pdf.set_font('Helvetica', 'B', 12)
     pdf.cell(0, 10, "Experience", 0, 1)
-    pdf.set_font('DejaVu', '', 11)
+    pdf.set_font('Helvetica', '', 11)
     pdf.multi_cell(0, 6, f"• {data['experience']} of relevant experience")
     pdf.multi_cell(0, 6, "• Developed projects demonstrating expertise in required technologies")
     pdf.multi_cell(0, 6, "• Collaborated with teams to deliver solutions meeting client requirements")
@@ -223,12 +223,12 @@ def create_cover_letter_pdf(data):
     pdf.add_page()
     
     # Title
-    pdf.set_font('DejaVu', 'B', 16)
+    pdf.set_font('Helvetica', 'B', 16)
     pdf.cell(0, 10, "Cover Letter", 0, 1, 'C')
     pdf.ln(10)
     
     # Date
-    pdf.set_font('DejaVu', '', 11)
+    pdf.set_font('Helvetica', '', 11)
     pdf.cell(0, 6, datetime.now().strftime("%B %d, %Y"), 0, 1)
     pdf.ln(10)
     
@@ -237,12 +237,12 @@ def create_cover_letter_pdf(data):
     pdf.ln(10)
     
     # Subject
-    pdf.set_font('DejaVu', 'B', 11)
+    pdf.set_font('Helvetica', 'B', 11)
     pdf.cell(0, 6, f"Re: Application for {data['job_title']} Position", 0, 1)
     pdf.ln(10)
     
     # Body - UPDATED with portfolio data
-    pdf.set_font('DejaVu', '', 11)
+    pdf.set_font('Helvetica', '', 11)
     
     # Create a skills summary from portfolio data
     all_skills = []
