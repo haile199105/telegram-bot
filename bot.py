@@ -161,7 +161,14 @@ else:
 try:
     genai.configure(api_key=GEMINI_API_KEY)
     # Try different model names
-    model_names = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+    # Try different model names - UPDATED 2026
+model_names = [
+    'gemini-2.5-flash',           # Fast, balanced - recommended
+    'gemini-2.5-flash-lite',       # Lightweight, cheaper
+    'gemini-2.5-pro',              # Most powerful
+    'gemini-2.0-flash-exp',        # Experimental fast model
+    'models/gemini-2.0-flash'      # Alternative format
+]
     model = None
     
     for model_name in model_names:
