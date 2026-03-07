@@ -30,17 +30,24 @@ else:
 try:
     genai.configure(api_key=GEMINI_API_KEY)
     
-    # Try different model names to find one that works
-    model_names = ['gemini-1.5-flash-001', 'gemini-1.5-flash', 'gemini-pro', 'gemini-1.0-pro']
-    model = None
+    # List of currently working models based on Google's documentation [citation:1][citation:4]
+    working_models = [
+        'gemini-2.5-flash',           # Fast, balanced - recommended default
+        'gemini-2.5-pro',              # Most powerful
+        'gemini-2.5-flash-lite',       # Cost-efficient
+        'gemini-3.1-flash-lite-preview', # Latest preview [citation:2]
+        'gemini-2.0-flash'             # Older but still supported
+    ]
     
-    for model_name in model_names:
+    model = None
+    for model_name in working_models:
         try:
-            print(f"Trying model: {model_name}")
-            model = genai.GenerativeModel(model_name)
-            # Test the model with a simple prompt
-            test_response = model.generate_content("Say 'OK' if you're working")
-            print(f"✅ Successfully using model: {model_name}")
+            print(f"🔄 Trying model: {model_name}")
+            test_model = genai.GenerativeModel(model_name)
+            # Test with a simple prompt
+            test_response = test_model.generate_content("Say 'OK'")
+            model = test_model
+            print(f"✅ Successfully connected using: {model_name}")
             break
         except Exception as e:
             print(f"❌ Model {model_name} failed: {e}")
@@ -48,12 +55,12 @@ try:
     
     if model is None:
         print("❌ No working Gemini model found!")
+        print("💡 Check your API key or visit https://makersuite.google.com/app/apikey")
         sys.exit(1)
         
 except Exception as e:
     print(f"❌ Gemini configuration error: {e}")
     sys.exit(1)
-
 # Store conversation history for each user
 user_conversations = {}
 
