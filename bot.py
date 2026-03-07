@@ -164,17 +164,18 @@ def create_cv_pdf(data):
     pdf.cell(0, 10, f"CV for {data['job_title']}", 0, 1, 'C')
     pdf.ln(10)
     
-  # Personal Info (using portfolio data)
-pdf.set_font('DejaVu', 'B', 12)
-pdf.cell(0, 10, "Personal Information", 0, 1)
-pdf.set_font('DejaVu', '', 11)
-pdf.cell(0, 10, f"Name: {portfolio_data['name']}", 0, 1)
-pdf.cell(0, 10, f"Title: {portfolio_data['title']}", 0, 1)
-pdf.cell(0, 10, f"Location: {portfolio_data['location']}", 0, 1)
-pdf.cell(0, 10, f"Education: {portfolio_data['education']}", 0, 1)
-pdf.cell(0, 10, f"Email: haileyesusshibru19@gmail.com", 0, 1)
-pdf.cell(0, 10, f"Position: {data['job_title']}", 0, 1)
-pdf.cell(0, 10, f"Company: {data['company']}", 0, 1)
+    # Personal Info (using portfolio data)
+    pdf.set_font('DejaVu', 'B', 12)
+    pdf.cell(0, 10, "Personal Information", 0, 1)
+    pdf.set_font('DejaVu', '', 11)
+    pdf.cell(0, 10, f"Name: {portfolio_data['name']}", 0, 1)
+    pdf.cell(0, 10, f"Title: {portfolio_data['title']}", 0, 1)
+    pdf.cell(0, 10, f"Location: {portfolio_data['location']}", 0, 1)
+    pdf.cell(0, 10, f"Education: {portfolio_data['education']}", 0, 1)
+    pdf.cell(0, 10, f"Email: haileyesusshibru19@gmail.com", 0, 1)
+    pdf.cell(0, 10, f"Position: {data['job_title']}", 0, 1)
+    pdf.cell(0, 10, f"Company: {data['company']}", 0, 1)
+    pdf.ln(5)
     
     # Professional Summary
     pdf.set_font('DejaVu', 'B', 12)
@@ -196,18 +197,18 @@ pdf.cell(0, 10, f"Company: {data['company']}", 0, 1)
     pdf.ln(5)
     
     # Technical Skills
-pdf.set_font('DejaVu', 'B', 12)
-pdf.cell(0, 10, "Technical Skills", 0, 1)
-pdf.set_font('DejaVu', '', 11)
+    pdf.set_font('DejaVu', 'B', 12)
+    pdf.cell(0, 10, "Technical Skills", 0, 1)
+    pdf.set_font('DejaVu', '', 11)
 
-# Format skills by category from portfolio data
-for category, skills in portfolio_data['skills'].items():
-    pdf.set_font('DejaVu', 'B', 11)
-    pdf.cell(0, 6, f"{category.title()}:", 0, 1)
-    pdf.set_font('DejaVu', '', 10)
-    pdf.cell(10)  # Indent
-    pdf.cell(0, 6, ", ".join(skills), 0, 1)
-pdf.ln(5)
+    # Format skills by category from portfolio data
+    for category, skills in portfolio_data['skills'].items():
+        pdf.set_font('DejaVu', 'B', 11)
+        pdf.cell(0, 6, f"{category.title()}:", 0, 1)
+        pdf.set_font('DejaVu', '', 10)
+        pdf.cell(10)  # Indent
+        pdf.cell(0, 6, ", ".join(skills), 0, 1)
+    pdf.ln(5)
     
     # Experience
     pdf.set_font('DejaVu', 'B', 12)
