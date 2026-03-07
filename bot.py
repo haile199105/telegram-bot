@@ -159,32 +159,40 @@ else:
 
 # ==================== GEMINI CONFIGURATION ====================
 try:
+    # Configure Gemini
+try:
     genai.configure(api_key=GEMINI_API_KEY)
-    # Try different model names
-    # Try different model names - UPDATED 2026
-model_names = [
-    'gemini-2.5-flash',           # Fast, balanced - recommended
-    'gemini-2.5-flash-lite',       # Lightweight, cheaper
-    'gemini-2.5-pro',              # Most powerful
-    'gemini-2.0-flash-exp',        # Experimental fast model
-    'models/gemini-2.0-flash'      # Alternative format
-]
+    
+    # Updated model names for 2026
+    model_names = [
+        'gemini-2.5-flash',           # Fast, balanced - recommended
+        'gemini-2.5-flash-lite',       # Lightweight, cheaper
+        'gemini-2.5-pro',              # Most powerful
+        'gemini-2.0-flash-exp',        # Experimental fast model
+        'models/gemini-2.0-flash'      # Alternative format
+    ]
+    
     model = None
+    last_error = None
     
     for model_name in model_names:
         try:
-            print(f"Trying model: {model_name}")
-            model = genai.GenerativeModel(model_name)
-            # Test the model
-            test_response = model.generate_content("Say 'OK'")
+            print(f"🔄 Trying model: {model_name}")
+            test_model = genai.GenerativeModel(model_name)
+            # Test the model with a simple prompt
+            test_response = test_model.generate_content("Say 'OK' if you're working")
+            model = test_model
             print(f"✅ Successfully using model: {model_name}")
             break
         except Exception as e:
-            print(f"Model {model_name} failed: {e}")
+            last_error = e
+            print(f"❌ Model {model_name} failed: {e}")
             continue
     
     if model is None:
         print("❌ No working Gemini model found!")
+        print(f"Last error: {last_error}")
+        print("💡 Check your API key at https://makersuite.google.com/app/apikey")
         sys.exit(1)
         
 except Exception as e:
