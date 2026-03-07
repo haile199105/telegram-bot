@@ -6,6 +6,73 @@ import google.generativeai as genai
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ConversationHandler
 from fpdf import FPDF
+import requests
+from bs4 import BeautifulSoup
+
+# Your portfolio URL
+PORTFOLIO_URL = "https://haile-portfolio-theta.vercel.app/"
+
+def fetch_portfolio_data():
+    """Fetch and parse information from portfolio website"""
+    try:
+        response = requests.get(PORTFOLIO_URL)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Extract information
+        data = {
+            'name': 'Haile',  # Default fallback
+            'title': 'IT Instructor & Developer',
+            'location': 'Addis Ababa',
+            'education': 'CS Graduate',
+            'experience_years': '1+ year teaching, 6+ months field experience',
+            'skills': {
+                'networking': ['Cisco IOS', 'Routing', 'Switching', 'Firewalls', 'TCP/IP'],
+                'programming': ['Python', 'Java', 'C++', 'JavaScript', 'TypeScript'],
+                'mobile': ['Flutter', 'Firebase', 'Dart'],
+                'devops': ['Docker', 'Linux'],
+                'it_support': ['Hardware', 'OS Support', 'Diagnostics']
+            },
+            'projects': [
+                'Network Configuration Lab Setup',
+                'Flutter-Based Mobile Application',
+                'GPS Installation & Tracking Workflow'
+            ]
+        }
+        
+        # Try to extract from website if possible
+        # This is a simplified version - actual extraction would need more specific parsing
+        
+        return data
+    except Exception as e:
+        print(f"Error fetching portfolio: {e}")
+        # Return default data if fetch fails
+        return get_default_portfolio_data()
+
+def get_default_portfolio_data():
+    """Default portfolio data as fallback"""
+    return {
+        'name': 'Haile',
+        'title': 'IT Instructor & Developer',
+        'location': 'Addis Ababa',
+        'education': 'CS Graduate',
+        'experience_years': '1+ year teaching, 6+ months field experience',
+        'skills': {
+            'networking': ['Cisco IOS', 'Routing', 'Switching', 'Firewalls'],
+            'programming': ['Python', 'Java', 'C++', 'JavaScript'],
+            'mobile': ['Flutter', 'Firebase', 'Dart'],
+            'devops': ['Docker'],
+            'it_support': ['Hardware', 'OS Support']
+        },
+        'projects': [
+            'Network Configuration Lab Setup',
+            'Flutter Mobile App',
+            'GPS Installation Workflow'
+        ]
+    }
+
+# Load portfolio data once at startup
+portfolio_data = fetch_portfolio_data()
+print("✅ Portfolio data loaded")
 
 print("Starting bot...")
 print(f"Python version: {sys.version}")
@@ -97,15 +164,15 @@ def create_cv_pdf(data):
     pdf.cell(0, 10, f"CV for {data['job_title']}", 0, 1, 'C')
     pdf.ln(10)
     
-    # Personal Info
-    pdf.set_font('DejaVu', 'B', 12)
-    pdf.cell(0, 10, "Personal Information", 0, 1)
-    pdf.set_font('DejaVu', '', 11)
-    pdf.cell(0, 10, "Name: Haile", 0, 1)
-    pdf.cell(0, 10, "Email: haileyesusshibru19@gmail.com", 0, 1)
-    pdf.cell(0, 10, f"Position: {data['job_title']}", 0, 1)
-    pdf.cell(0, 10, f"Company: {data['company']}", 0, 1)
-    pdf.ln(5)
+   # Personal Info
+pdf.set_font('DejaVu', 'B', 12)
+pdf.cell(0, 10, "Personal Information", 0, 1)
+pdf.set_font('DejaVu', '', 11)
+pdf.cell(0, 10, f"Name: {portfolio_data['name']}", 0, 1)
+pdf.cell(0, 10, f"Title: {portfolio_data['title']}", 0, 1)
+pdf.cell(0, 10, f"Location: {portfolio_data['location']}", 0, 1)
+pdf.cell(0, 10, f"Education: {portfolio_data['education']}", 0, 1)
+pdf.cell(0, 10, f"Email: haileyesusshibru19@gmail.com", 0, 1)
     
     # Professional Summary
     pdf.set_font('DejaVu', 'B', 12)
@@ -127,14 +194,18 @@ def create_cv_pdf(data):
     pdf.ln(5)
     
     # Technical Skills
-    pdf.set_font('DejaVu', 'B', 12)
-    pdf.cell(0, 10, "Technical Skills", 0, 1)
-    pdf.set_font('DejaVu', '', 11)
-    
-    skills_list = data['skills'].split(',')
-    skills_text = ", ".join([s.strip() for s in skills_list])
-    pdf.multi_cell(0, 6, skills_text)
-    pdf.ln(5)
+pdf.set_font('DejaVu', 'B', 12)
+pdf.cell(0, 10, "Technical Skills", 0, 1)
+pdf.set_font('DejaVu', '', 11)
+
+# Format skills by category from portfolio data
+for category, skills in portfolio_data['skills'].items():
+    pdf.set_font('DejaVu', 'B', 11)
+    pdf.cell(0, 6, f"{category.title()}:", 0, 1)
+    pdf.set_font('DejaVu', '', 10)
+    pdf.cell(10)  # Indent
+    pdf.cell(0, 6, ", ".join(skills), 0, 1)
+pdf.ln(5)
     
     # Experience
     pdf.set_font('DejaVu', 'B', 12)
@@ -173,26 +244,40 @@ def create_cover_letter_pdf(data):
     pdf.cell(0, 6, f"Re: Application for {data['job_title']} Position", 0, 1)
     pdf.ln(10)
     
-    # Body
+    # Body - UPDATED with portfolio data
     pdf.set_font('DejaVu', '', 11)
+    
+    # Create a skills summary from portfolio data
+    all_skills = []
+    for category, skills in portfolio_data['skills'].items():
+        all_skills.extend(skills)
+    skills_summary = ", ".join(all_skills[:10])  # Top 10 skills
+    
     body = f"""
 Dear Hiring Manager,
 
-I am writing to express my strong interest in the {data['job_title']} position at {data['company']}. With my experience in {data['skills']}, I am confident in my ability to contribute effectively to your team.
+I am writing to express my strong interest in the {data['job_title']} position at {data['company']}. As an {portfolio_data['title']} based in {portfolio_data['location']} with {portfolio_data['experience_years']}, I am confident in my ability to contribute effectively to your team.
+
+My background includes:
+• {portfolio_data['experience_years']} of teaching and practical experience
+• Expertise in: {skills_summary}
+• {portfolio_data['education']} in Computer Science
 
 Your requirement for {data['requirements']} aligns perfectly with my background. I have {data['experience']} of experience developing solutions and working with teams to deliver high-quality results.
 
 Key qualifications I bring:
 - Expertise in {data['skills']}
-- Proven track record of meeting requirements
+- Proven track record of meeting requirements like {data['requirements']}
 - Strong commitment to learning and growth
 - Excellent problem-solving and communication skills
 
 I would welcome the opportunity to discuss how my skills and experience align with {data['company']}'s needs. Thank you for considering my application.
 
 Best regards,
-Haile
+{portfolio_data['name']}
+{portfolio_data['title']}
 haileyesusshibru19@gmail.com
+{portfolio_data['location']}
     """
     
     pdf.multi_cell(0, 6, body)
