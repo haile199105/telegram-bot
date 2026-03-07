@@ -2,5 +2,6 @@ python-telegram-bot==20.3
 google-generativeai==0.8.4
 python-dotenv==1.0.0
 fpdf2==2.7.4
-beautifulsoup4==4.12.3
 requests==2.31.0
+beautifulsoup4==4.12.3
+lxml==4.9.3  # Faster HTML parsing
