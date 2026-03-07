@@ -1,8 +1,11 @@
 import os
 import sys
+import tempfile
+from datetime import datetime
 import google.generativeai as genai
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ConversationHandler
+from fpdf import FPDF
 
 print("Starting bot...")
 print(f"Python version: {sys.version}")
@@ -11,7 +14,7 @@ print(f"Python version: {sys.version}")
 TELEGRAM_TOKEN = os.environ.get('TOKEN')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 
-# Debug: Print if tokens are found (hiding most of the token for security)
+# Debug: Print if tokens are found
 print(f"TELEGRAM_TOKEN found: {'Yes' if TELEGRAM_TOKEN else 'No'}")
 if TELEGRAM_TOKEN:
     print(f"TELEGRAM_TOKEN starts with: {TELEGRAM_TOKEN[:5]}...")
@@ -29,48 +32,169 @@ else:
 # Configure Gemini
 try:
     genai.configure(api_key=GEMINI_API_KEY)
-    
-    # List of currently working models based on Google's documentation [citation:1][citation:4]
-    working_models = [
-        'gemini-2.5-flash',           # Fast, balanced - recommended default
-        'gemini-2.5-pro',              # Most powerful
-        'gemini-2.5-flash-lite',       # Cost-efficient
-        'gemini-3.1-flash-lite-preview', # Latest preview [citation:2]
-        'gemini-2.0-flash'             # Older but still supported
-    ]
-    
+    # Try different model names
+    model_names = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
     model = None
-    for model_name in working_models:
+    
+    for model_name in model_names:
         try:
-            print(f"🔄 Trying model: {model_name}")
-            test_model = genai.GenerativeModel(model_name)
-            # Test with a simple prompt
-            test_response = test_model.generate_content("Say 'OK'")
-            model = test_model
-            print(f"✅ Successfully connected using: {model_name}")
+            print(f"Trying model: {model_name}")
+            model = genai.GenerativeModel(model_name)
+            # Test the model
+            test_response = model.generate_content("Say 'OK'")
+            print(f"✅ Successfully using model: {model_name}")
             break
         except Exception as e:
-            print(f"❌ Model {model_name} failed: {e}")
+            print(f"Model {model_name} failed: {e}")
             continue
     
     if model is None:
         print("❌ No working Gemini model found!")
-        print("💡 Check your API key or visit https://makersuite.google.com/app/apikey")
         sys.exit(1)
         
 except Exception as e:
     print(f"❌ Gemini configuration error: {e}")
     sys.exit(1)
-# Store conversation history for each user
-user_conversations = {}
+
+# Conversation states
+JOB_TITLE, COMPANY, REQUIREMENTS, SKILLS, EXPERIENCE = range(5)
+
+# Store user data temporarily
+user_data = {}
 
 # Your Telegram ID for private access
-YOUR_ID = 6673503943  # ⚠️ REPLACE WITH YOUR ACTUAL TELEGRAM ID!
-print(f"Your Telegram ID set to: {YOUR_ID}")
+YOUR_ID = 6673503943  # Your actual ID
 
 def is_authorized(user_id):
     """Check if user is authorized (only you)"""
     return user_id == YOUR_ID
+
+# PDF Generator Class
+class PDF(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 10, f'Job Application Documents - {datetime.now().strftime("%Y-%m-%d")}', 0, 1, 'C')
+        self.ln(10)
+    
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+
+def create_cv_pdf(data):
+    """Create a PDF CV from the collected data"""
+    pdf = PDF()
+    pdf.add_page()
+    
+    # Title
+    pdf.set_font('Arial', 'B', 16)
+    pdf.cell(0, 10, f"CV for {data['job_title']}", 0, 1, 'C')
+    pdf.ln(10)
+    
+    # Personal Info
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, "Personal Information", 0, 1)
+    pdf.set_font('Arial', '', 11)
+    pdf.cell(0, 10, "Name: Haile", 0, 1)
+    pdf.cell(0, 10, "Email: haileyesusshibru19@gmail.com", 0, 1)
+    pdf.cell(0, 10, f"Position: {data['job_title']}", 0, 1)
+    pdf.cell(0, 10, f"Company: {data['company']}", 0, 1)
+    pdf.ln(5)
+    
+    # Professional Summary
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, "Professional Summary", 0, 1)
+    pdf.set_font('Arial', '', 11)
+    pdf.multi_cell(0, 6, f"Passionate {data['job_title']} with {data['experience']} of experience. Skilled in {data['skills']} and dedicated to delivering high-quality results.")
+    pdf.ln(5)
+    
+    # Key Qualifications
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, "Key Qualifications", 0, 1)
+    pdf.set_font('Arial', '', 11)
+    
+    # Split requirements into bullet points
+    requirements_list = data['requirements'].split(',')
+    for req in requirements_list[:5]:
+        pdf.cell(10)
+        pdf.cell(0, 6, f"• {req.strip()}", 0, 1)
+    pdf.ln(5)
+    
+    # Technical Skills
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, "Technical Skills", 0, 1)
+    pdf.set_font('Arial', '', 11)
+    
+    skills_list = data['skills'].split(',')
+    skills_text = ", ".join([s.strip() for s in skills_list])
+    pdf.multi_cell(0, 6, skills_text)
+    pdf.ln(5)
+    
+    # Experience
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, "Experience", 0, 1)
+    pdf.set_font('Arial', '', 11)
+    pdf.multi_cell(0, 6, f"• {data['experience']} of relevant experience")
+    pdf.multi_cell(0, 6, "• Developed projects demonstrating expertise in required technologies")
+    pdf.multi_cell(0, 6, "• Collaborated with teams to deliver solutions meeting client requirements")
+    
+    # Save to temporary file
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+    pdf.output(temp_file.name)
+    return temp_file.name
+
+def create_cover_letter_pdf(data):
+    """Create a PDF cover letter from the collected data"""
+    pdf = PDF()
+    pdf.add_page()
+    
+    # Title
+    pdf.set_font('Arial', 'B', 16)
+    pdf.cell(0, 10, "Cover Letter", 0, 1, 'C')
+    pdf.ln(10)
+    
+    # Date
+    pdf.set_font('Arial', '', 11)
+    pdf.cell(0, 6, datetime.now().strftime("%B %d, %Y"), 0, 1)
+    pdf.ln(10)
+    
+    # Recipient
+    pdf.multi_cell(0, 6, f"Hiring Manager\n{data['company']}\n[Company Address]")
+    pdf.ln(10)
+    
+    # Subject
+    pdf.set_font('Arial', 'B', 11)
+    pdf.cell(0, 6, f"Re: Application for {data['job_title']} Position", 0, 1)
+    pdf.ln(10)
+    
+    # Body
+    pdf.set_font('Arial', '', 11)
+    body = f"""
+Dear Hiring Manager,
+
+I am writing to express my strong interest in the {data['job_title']} position at {data['company']}. With my experience in {data['skills']}, I am confident in my ability to contribute effectively to your team.
+
+Your requirement for {data['requirements']} aligns perfectly with my background. I have {data['experience']} of experience developing solutions and working with teams to deliver high-quality results.
+
+Key qualifications I bring:
+• Expertise in {data['skills']}
+• Proven track record of meeting requirements
+• Strong commitment to learning and growth
+• Excellent problem-solving and communication skills
+
+I would welcome the opportunity to discuss how my skills and experience align with {data['company']}'s needs. Thank you for considering my application.
+
+Best regards,
+Haile
+haileyesusshibru19@gmail.com
+    """
+    
+    pdf.multi_cell(0, 6, body)
+    
+    # Save to temporary file
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+    pdf.output(temp_file.name)
+    return temp_file.name
 
 async def start(update: Update, context):
     """Welcome message with buttons"""
@@ -80,24 +204,170 @@ async def start(update: Update, context):
     
     user = update.effective_user
     welcome_message = f"""
-👋 **Hello {user.first_name}! Welcome to your AI-powered bot!**
+👋 **Hello {user.first_name}! Welcome to your Job Application Assistant!**
 
-I'm integrated with Google's **Gemini AI**! Here's what I can do:
+I can help you create professional CVs and cover letters in PDF format!
 
-🤖 **Chat with AI** - Just send me any message and I'll respond intelligently
-📝 **Commands** - Use the buttons below or type commands
+📄 **Features:**
+• Create customized CVs as PDF
+• Generate tailored cover letters as PDF
+• AI-powered content generation
+• Save and download files directly
 
-**Try it:** Just send me any question!
+**What would you like to create?**
     """
     
     keyboard = [
-        [InlineKeyboardButton("🤖 Ask AI", callback_data="ai_chat")],
+        [InlineKeyboardButton("📄 Create CV", callback_data="create_cv")],
+        [InlineKeyboardButton("✉️ Create Cover Letter", callback_data="create_cover")],
         [InlineKeyboardButton("📁 Portfolio", url="https://haile-portfolio-theta.vercel.app/")],
         [InlineKeyboardButton("❓ Help", callback_data="help")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(welcome_message, parse_mode='Markdown', reply_markup=reply_markup)
+
+async def create_cv_start(update: Update, context):
+    """Start CV creation process"""
+    query = update.callback_query
+    await query.answer()
+    
+    await query.message.reply_text(
+        "📄 **Let's create your CV!**\n\n"
+        "Please answer a few questions:\n\n"
+        "**What job title are you applying for?**\n"
+        "(Example: Python Developer, Junior Programmer)"
+    )
+    return JOB_TITLE
+
+async def create_cover_start(update: Update, context):
+    """Start cover letter creation process"""
+    query = update.callback_query
+    await query.answer()
+    
+    await query.message.reply_text(
+        "✉️ **Let's create your cover letter!**\n\n"
+        "Please answer a few questions:\n\n"
+        "**What job title are you applying for?**"
+    )
+    return JOB_TITLE
+
+async def get_job_title(update: Update, context):
+    """Get job title from user"""
+    user_id = update.message.from_user.id
+    if user_id not in user_data:
+        user_data[user_id] = {}
+    
+    user_data[user_id]['job_title'] = update.message.text
+    
+    await update.message.reply_text(
+        f"📌 Job title: **{update.message.text}**\n\n"
+        "**What company are you applying to?**"
+    )
+    return COMPANY
+
+async def get_company(update: Update, context):
+    """Get company name from user"""
+    user_id = update.message.from_user.id
+    user_data[user_id]['company'] = update.message.text
+    
+    await update.message.reply_text(
+        f"🏢 Company: **{update.message.text}**\n\n"
+        "**What are the key requirements from the job posting?**\n"
+        "(List skills separated by commas)"
+    )
+    return REQUIREMENTS
+
+async def get_requirements(update: Update, context):
+    """Get job requirements from user"""
+    user_id = update.message.from_user.id
+    user_data[user_id]['requirements'] = update.message.text
+    
+    await update.message.reply_text(
+        "✅ **Great! Now tell me about your relevant skills:**\n"
+        "(List your skills separated by commas: Python, Communication, etc.)"
+    )
+    return SKILLS
+
+async def get_skills(update: Update, context):
+    """Get user skills"""
+    user_id = update.message.from_user.id
+    user_data[user_id]['skills'] = update.message.text
+    
+    await update.message.reply_text(
+        "📊 **How many years of relevant experience do you have?**\n"
+        "(Example: 2 years, 3+ years)"
+    )
+    return EXPERIENCE
+
+async def generate_pdfs(update: Update, context):
+    """Generate and send PDF files"""
+    user_id = update.message.from_user.id
+    user_data[user_id]['experience'] = update.message.text
+    
+    data = user_data[user_id]
+    
+    await update.message.reply_text("⏳ **Generating your PDF documents...**")
+    
+    try:
+        # Create PDFs
+        cv_pdf_path = create_cv_pdf(data)
+        cover_pdf_path = create_cover_letter_pdf(data)
+        
+        # Send CV PDF
+        with open(cv_pdf_path, 'rb') as cv_file:
+            await update.message.reply_document(
+                document=cv_file,
+                filename=f"CV_{data['job_title'].replace(' ', '_')}.pdf",
+                caption="📄 **Your customized CV**"
+            )
+        
+        # Send Cover Letter PDF
+        with open(cover_pdf_path, 'rb') as cover_file:
+            await update.message.reply_document(
+                document=cover_file,
+                filename=f"Cover_Letter_{data['job_title'].replace(' ', '_')}.pdf",
+                caption="✉️ **Your customized cover letter**"
+            )
+        
+        # Clean up temporary files
+        os.unlink(cv_pdf_path)
+        os.unlink(cover_pdf_path)
+        
+        # Ask what to do next
+        keyboard = [
+            [InlineKeyboardButton("📄 New CV", callback_data="create_cv")],
+            [InlineKeyboardButton("✉️ New Cover Letter", callback_data="create_cover")],
+            [InlineKeyboardButton("🏠 Main Menu", callback_data="menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            "✅ **Documents generated successfully!**\n\n"
+            "You can download the PDF files above.\n\n"
+            "What would you like to do next?",
+            reply_markup=reply_markup
+        )
+        
+    except Exception as e:
+        await update.message.reply_text(f"❌ **Error generating PDFs:** {str(e)}")
+        print(f"PDF Generation Error: {e}")
+    
+    finally:
+        # Clear user data
+        if user_id in user_data:
+            del user_data[user_id]
+    
+    return ConversationHandler.END
+
+async def cancel(update: Update, context):
+    """Cancel conversation"""
+    user_id = update.message.from_user.id
+    if user_id in user_data:
+        del user_data[user_id]
+    
+    await update.message.reply_text("❌ Operation cancelled. Use /start to begin again.")
+    return ConversationHandler.END
 
 async def help_command(update: Update, context):
     """Show help menu"""
@@ -108,147 +378,16 @@ async def help_command(update: Update, context):
 📋 **Available Commands:**
 
 /start - Main menu
+/createcv - Start CV creation
+/createcover - Start cover letter
 /help - Show this help
-/clear - Clear conversation history
-/about - About me
-/portfolio - My portfolio
-/contact - Contact info
-/job - Job status
 
-**AI Chat:**
-Just send any message and I'll respond using Gemini AI!
-Use /clear to reset the conversation.
+**How it works:**
+1. Click "Create CV" or "Create Cover Letter"
+2. Answer a few questions about the job
+3. Get professional PDF files ready to use!
     """
     await update.message.reply_text(help_text, parse_mode='Markdown')
-
-async def clear_command(update: Update, context):
-    """Clear conversation history"""
-    if not is_authorized(update.effective_user.id):
-        return
-    
-    user_id = update.effective_user.id
-    if user_id in user_conversations:
-        del user_conversations[user_id]
-    
-    await update.message.reply_text("🧹 Conversation history cleared! Let's start fresh.")
-
-async def about(update: Update, context):
-    """About you"""
-    if not is_authorized(update.effective_user.id):
-        return
-    
-    about_text = """
-👨‍💻 **About Me**
-
-I'm Haile, a developer passionate about AI and automation.
-
-🔧 **Skills:**
-- Python Programming
-- AI Integration (Gemini)
-- Telegram Bots
-- Web Development
-
-🌱 Currently learning and building!
-    """
-    await update.message.reply_text(about_text, parse_mode='Markdown')
-
-async def portfolio(update: Update, context):
-    """Portfolio link"""
-    if not is_authorized(update.effective_user.id):
-        return
-    
-    keyboard = [
-        [InlineKeyboardButton("🌐 Visit My Portfolio", url="https://haile-portfolio-theta.vercel.app/")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        "Click the button below to check out my portfolio!",
-        reply_markup=reply_markup
-    )
-
-async def contact(update: Update, context):
-    """Contact information"""
-    if not is_authorized(update.effective_user.id):
-        return
-    
-    contact_text = """
-📬 **Contact Info**
-
-📧 Email: haileyesusshibru19@gmail.com
-💼 GitHub: github.com/haile199105
-📱 Telegram: @haile199105
-    """
-    await update.message.reply_text(contact_text, parse_mode='Markdown')
-
-async def job_status(update: Update, context):
-    """Job search status"""
-    if not is_authorized(update.effective_user.id):
-        return
-    
-    job_text = """
-💼 **Job Search Status**
-
-🔍 Looking for opportunities in:
-- Python Development
-- AI/ML Integration
-- Bot Development
-
-📊 **Status:** Actively looking
-⭐ **Open to:** Remote, Hybrid, On-site
-    """
-    await update.message.reply_text(job_text, parse_mode='Markdown')
-
-async def handle_message(update: Update, context):
-    """Handle regular messages with Gemini AI"""
-    if not is_authorized(update.effective_user.id):
-        return
-    
-    user_id = update.effective_user.id
-    user_message = update.message.text
-    
-    # Show typing indicator
-    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
-    
-    try:
-        # Initialize conversation history for new users
-        if user_id not in user_conversations:
-            user_conversations[user_id] = []
-        
-        # Add user message to history
-        user_conversations[user_id].append(f"User: {user_message}")
-        
-        # Keep only last 10 messages for context (to avoid token limits)
-        if len(user_conversations[user_id]) > 10:
-            user_conversations[user_id] = user_conversations[user_id][-10:]
-        
-        # Create context prompt
-        context_history = "\n".join(user_conversations[user_id])
-        prompt = f"""You are a helpful AI assistant integrated into a Telegram bot. 
-        Have a natural conversation with the user.
-        
-        Conversation history:
-        {context_history}
-        
-        Respond naturally and helpfully:"""
-        
-        # Get response from Gemini
-        response = model.generate_content(prompt)
-        ai_response = response.text
-        
-        # Add AI response to history
-        user_conversations[user_id].append(f"Assistant: {ai_response}")
-        
-        # Send response (split if too long)
-        if len(ai_response) > 4000:
-            for i in range(0, len(ai_response), 4000):
-                await update.message.reply_text(ai_response[i:i+4000])
-        else:
-            await update.message.reply_text(ai_response)
-            
-    except Exception as e:
-        error_message = f"❌ Error getting AI response: {str(e)}"
-        await update.message.reply_text(error_message)
-        print(f"Gemini API Error: {e}")
 
 async def button_callback(update: Update, context):
     """Handle button clicks"""
@@ -257,17 +396,19 @@ async def button_callback(update: Update, context):
     
     if query.data == "help":
         await help_command(update, context)
-    elif query.data == "ai_chat":
-        await query.message.reply_text(
-            "🤖 **AI Chat Mode**\n\nJust send me any message and I'll respond using Gemini AI!\n"
-            "Use /clear to reset the conversation."
-        )
+    elif query.data == "create_cv":
+        await create_cv_start(update, context)
+        return JOB_TITLE
+    elif query.data == "create_cover":
+        await create_cover_start(update, context)
+        return JOB_TITLE
+    elif query.data == "menu":
+        await start(update, context)
 
 def main():
     """Main function to run the bot"""
     print("Building application...")
     
-    # Verify token before building app
     if not TELEGRAM_TOKEN:
         print("❌ Cannot start: TELEGRAM_TOKEN is missing")
         return
@@ -279,23 +420,32 @@ def main():
         print(f"❌ Failed to build application: {e}")
         return
     
-    # Add command handlers
+    # Conversation handler for CV/Cover Letter
+    conv_handler = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(create_cv_start, pattern="^create_cv$"),
+            CallbackQueryHandler(create_cover_start, pattern="^create_cover$"),
+            CommandHandler("createcv", create_cv_start),
+            CommandHandler("createcover", create_cover_start)
+        ],
+        states={
+            JOB_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_job_title)],
+            COMPANY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_company)],
+            REQUIREMENTS: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_requirements)],
+            SKILLS: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_skills)],
+            EXPERIENCE: [MessageHandler(filters.TEXT & ~filters.COMMAND, generate_pdfs)]
+        },
+        fallbacks=[CommandHandler("cancel", cancel)]
+    )
+    
+    # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("clear", clear_command))
-    app.add_handler(CommandHandler("about", about))
-    app.add_handler(CommandHandler("portfolio", portfolio))
-    app.add_handler(CommandHandler("contact", contact))
-    app.add_handler(CommandHandler("job", job_status))
-    
-    # Handle regular messages (non-commands)
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    # Handle button callbacks
+    app.add_handler(conv_handler)
     app.add_handler(CallbackQueryHandler(button_callback))
     
-    print("✅ Bot is running! Press Ctrl+C to stop.")
-    print("🤖 Gemini AI is active - send any message to chat!")
+    print("✅ Bot is running! PDF generation ready.")
+    print("🤖 Send /start to create CVs and cover letters!")
     app.run_polling()
 
 if __name__ == "__main__":
