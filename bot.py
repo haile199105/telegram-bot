@@ -477,6 +477,44 @@ async def help_command(update: Update, context):
     """
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
+async def handle_message(update: Update, context):
+    """Handle regular messages with Gemini AI"""
+    if not is_authorized(update.effective_user.id):
+        return
+    
+    user_message = update.message.text
+    user = update.effective_user
+    
+    # Show typing indicator
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+    
+    try:
+        # Create a prompt for Gemini
+        prompt = f"""
+        You are a helpful AI assistant for a job search bot. 
+        The user's name is {user.first_name}.
+        
+        User message: {user_message}
+        
+        Respond in a friendly, helpful way. Keep responses concise but informative.
+        """
+        
+        # Get response from Gemini
+        response = model.generate_content(prompt)
+        ai_response = response.text
+        
+        # Send response (split if too long)
+        if len(ai_response) > 4000:
+            for i in range(0, len(ai_response), 4000):
+                await update.message.reply_text(ai_response[i:i+4000])
+        else:
+            await update.message.reply_text(ai_response)
+            
+    except Exception as e:
+        error_message = f"❌ Error: {str(e)}"
+        await update.message.reply_text(error_message)
+        print(f"Gemini API Error: {e}")
+
 async def button_callback(update: Update, context):
     """Handle button clicks"""
     query = update.callback_query
@@ -530,6 +568,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(conv_handler)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(CallbackQueryHandler(button_callback))
     
     print("✅ Bot is running! PDF generation ready.")
