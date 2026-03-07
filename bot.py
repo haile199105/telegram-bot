@@ -136,22 +136,16 @@ def is_authorized(user_id):
     """Check if user is authorized (only you)"""
     return user_id == YOUR_ID
 
-# PDF Generator Class with Unicode support
+# PDF Generator Class with Unicode support using built-in fonts
 class PDF(FPDF):
-    def __init__(self):
-        super().__init__()
-        # Add Unicode font support
-        self.add_font('DejaVu', '', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', uni=True)
-        self.add_font('DejaVu', 'B', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', uni=True)
-    
     def header(self):
-        self.set_font('DejaVu', 'B', 12)
+        self.set_font('Helvetica', 'B', 12)
         self.cell(0, 10, f'Job Application Documents - {datetime.now().strftime("%Y-%m-%d")}', 0, 1, 'C')
         self.ln(10)
     
     def footer(self):
         self.set_y(-15)
-        self.set_font('DejaVu', 'I', 8)
+        self.set_font('Helvetica', 'I', 8)
         self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
 
 def create_cv_pdf(data):
