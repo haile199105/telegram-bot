@@ -29,8 +29,27 @@ else:
 # Configure Gemini
 try:
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash-001')
-    print("✅ Gemini configured successfully")
+    
+    # Try different model names to find one that works
+    model_names = ['gemini-1.5-flash-001', 'gemini-1.5-flash', 'gemini-pro', 'gemini-1.0-pro']
+    model = None
+    
+    for model_name in model_names:
+        try:
+            print(f"Trying model: {model_name}")
+            model = genai.GenerativeModel(model_name)
+            # Test the model with a simple prompt
+            test_response = model.generate_content("Say 'OK' if you're working")
+            print(f"✅ Successfully using model: {model_name}")
+            break
+        except Exception as e:
+            print(f"❌ Model {model_name} failed: {e}")
+            continue
+    
+    if model is None:
+        print("❌ No working Gemini model found!")
+        sys.exit(1)
+        
 except Exception as e:
     print(f"❌ Gemini configuration error: {e}")
     sys.exit(1)
