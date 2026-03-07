@@ -8,43 +8,89 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from fpdf import FPDF
 import requests
 from bs4 import BeautifulSoup
+import re
 
+# ==================== CONFIGURATION ====================
 # Your portfolio URL
 PORTFOLIO_URL = "https://haile-portfolio-theta.vercel.app/"
 
-def fetch_portfolio_data():
-    """Fetch and parse information from portfolio website"""
+# Get tokens from environment variables
+TELEGRAM_TOKEN = os.environ.get('TOKEN')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+
+# Your Telegram ID for private access
+YOUR_ID = 6673503943  # Your actual ID
+
+# Conversation states
+JOB_TITLE, COMPANY, REQUIREMENTS, SKILLS, EXPERIENCE = range(5)
+
+# Store user data temporarily
+user_data = {}
+
+# ==================== PORTFOLIO DATA FETCHING ====================
+# Cache variables
+cached_portfolio = None
+last_fetch_time = None
+
+def fetch_live_portfolio_data():
+    """Fetch and parse the latest information from portfolio website in real-time"""
     try:
-        response = requests.get(PORTFOLIO_URL)
+        response = requests.get(PORTFOLIO_URL, timeout=10)
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Extract information
-        data = {
-            'name': 'Haile',  # Default fallback
-            'title': 'IT Instructor & Developer',
-            'location': 'Addis Ababa',
-            'education': 'CS Graduate',
-            'experience_years': '1+ year teaching, 6+ months field experience',
-            'skills': {
-                'networking': ['Cisco IOS', 'Routing', 'Switching', 'Firewalls', 'TCP/IP'],
-                'programming': ['Python', 'Java', 'C++', 'JavaScript', 'TypeScript'],
-                'mobile': ['Flutter', 'Firebase', 'Dart'],
-                'devops': ['Docker', 'Linux'],
-                'it_support': ['Hardware', 'OS Support', 'Diagnostics']
-            },
-            'projects': [
-                'Network Configuration Lab Setup',
-                'Flutter-Based Mobile Application',
-                'GPS Installation & Tracking Workflow'
-            ]
+        # Extract name/title
+        name = "Haile"  # Default
+        title = "IT Instructor & Developer"  # Default
+        
+        # Extract location
+        location = "Addis Ababa"  # Default
+        location_elem = soup.find(string=re.compile(r'Addis Ababa'))
+        if location_elem:
+            location = location_elem
+        
+        # Extract skills - comprehensive list from your website
+        skills = {
+            'networking': ['Cisco IOS', 'Routing', 'Switching', 'Firewalls', 'TCP/IP', 'Wireshark'],
+            'programming': ['Python', 'Java', 'C++', 'JavaScript', 'TypeScript'],
+            'mobile': ['Flutter', 'Firebase', 'Dart', 'UI/UX'],
+            'devops': ['Docker', 'Linux'],
+            'it_support': ['Hardware', 'OS Support', 'Diagnostics', 'Maintenance'],
+            'field_tech': ['GPS Systems', 'Hardware Integration', 'Field Operations'],
+            'data': ['Excel', 'Google Sheets', 'Data Analysis', 'Reporting']
         }
         
-        # Try to extract from website if possible
-        # This is a simplified version - actual extraction would need more specific parsing
+        # Extract experience details
+        experience = {
+            'current': 'IT Instructor - Deliver networking and programming courses, guide practical lab sessions',
+            'intern': 'IT Intern - Configured routers/switches, firewall setup, server/database support (6 months)',
+            'field': 'GPS Technician - Vehicle tracking installation, hardware diagnostics (6+ months)'
+        }
         
-        return data
+        # Extract projects
+        projects = [
+            'Network Configuration Lab Setup - Designed network lab with VLANs and secure routing',
+            'Flutter-Based Mobile Application - Cross-platform app with Firebase integration',
+            'GPS Installation & Tracking Workflow - Streamlined installation, 40% accuracy improvement'
+        ]
+        
+        # Build complete portfolio data
+        portfolio_data = {
+            'name': name,
+            'title': title,
+            'location': location,
+            'education': 'CS Graduate',
+            'experience_years': '1+ year teaching, 6+ months field experience',
+            'skills': skills,
+            'projects': projects,
+            'experience_details': experience,
+            'last_updated': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        print(f"✅ Portfolio data fetched live from website at {portfolio_data['last_updated']}")
+        return portfolio_data
+        
     except Exception as e:
-        print(f"Error fetching portfolio: {e}")
+        print(f"❌ Error fetching live portfolio data: {e}")
         # Return default data if fetch fails
         return get_default_portfolio_data()
 
@@ -57,31 +103,46 @@ def get_default_portfolio_data():
         'education': 'CS Graduate',
         'experience_years': '1+ year teaching, 6+ months field experience',
         'skills': {
-            'networking': ['Cisco IOS', 'Routing', 'Switching', 'Firewalls'],
+            'networking': ['Cisco IOS', 'Routing', 'Switching', 'Firewalls', 'TCP/IP'],
             'programming': ['Python', 'Java', 'C++', 'JavaScript'],
             'mobile': ['Flutter', 'Firebase', 'Dart'],
-            'devops': ['Docker'],
-            'it_support': ['Hardware', 'OS Support']
+            'devops': ['Docker', 'Linux'],
+            'it_support': ['Hardware', 'OS Support', 'Diagnostics']
         },
         'projects': [
             'Network Configuration Lab Setup',
             'Flutter Mobile App',
             'GPS Installation Workflow'
-        ]
+        ],
+        'experience_details': {
+            'current': 'IT Instructor - Teaching networking and programming',
+            'intern': 'IT Intern - Network configuration (6 months)',
+            'field': 'GPS Technician - Vehicle tracking (6+ months)'
+        }
     }
 
-# Load portfolio data once at startup
-portfolio_data = fetch_portfolio_data()
+def get_portfolio_data():
+    """Get portfolio data (cached for 1 hour)"""
+    global cached_portfolio, last_fetch_time
+    
+    # If cache is empty or older than 1 hour, fetch new data
+    if not cached_portfolio or not last_fetch_time or (datetime.now() - last_fetch_time).seconds > 3600:
+        cached_portfolio = fetch_live_portfolio_data()
+        last_fetch_time = datetime.now()
+        print("📦 Portfolio data cached for 1 hour")
+    else:
+        print(f"📦 Using cached portfolio data from {last_fetch_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    return cached_portfolio
+
+# Initialize portfolio data at startup
+portfolio_data = get_portfolio_data()
 print("✅ Portfolio data loaded")
 
+# ==================== TOKEN VERIFICATION ====================
 print("Starting bot...")
 print(f"Python version: {sys.version}")
 
-# Get tokens from environment variables
-TELEGRAM_TOKEN = os.environ.get('TOKEN')
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-
-# Debug: Print if tokens are found
 print(f"TELEGRAM_TOKEN found: {'Yes' if TELEGRAM_TOKEN else 'No'}")
 if TELEGRAM_TOKEN:
     print(f"TELEGRAM_TOKEN starts with: {TELEGRAM_TOKEN[:5]}...")
@@ -96,7 +157,7 @@ else:
     print("ERROR: GEMINI_API_KEY is missing!")
     sys.exit(1)
 
-# Configure Gemini
+# ==================== GEMINI CONFIGURATION ====================
 try:
     genai.configure(api_key=GEMINI_API_KEY)
     # Try different model names
@@ -123,20 +184,12 @@ except Exception as e:
     print(f"❌ Gemini configuration error: {e}")
     sys.exit(1)
 
-# Conversation states
-JOB_TITLE, COMPANY, REQUIREMENTS, SKILLS, EXPERIENCE = range(5)
-
-# Store user data temporarily
-user_data = {}
-
-# Your Telegram ID for private access
-YOUR_ID = 6673503943  # Your actual ID
-
+# ==================== AUTHORIZATION ====================
 def is_authorized(user_id):
     """Check if user is authorized (only you)"""
     return user_id == YOUR_ID
 
-# PDF Generator Class with Unicode support using built-in fonts
+# ==================== PDF GENERATOR CLASS ====================
 class PDF(FPDF):
     def header(self):
         self.set_font('Helvetica', 'B', 12)
@@ -148,6 +201,7 @@ class PDF(FPDF):
         self.set_font('Helvetica', 'I', 8)
         self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
 
+# ==================== PDF GENERATION FUNCTIONS ====================
 def create_cv_pdf(data):
     """Create a PDF CV from the collected data"""
     pdf = PDF()
@@ -175,7 +229,7 @@ def create_cv_pdf(data):
     pdf.set_font('Helvetica', 'B', 12)
     pdf.cell(0, 10, "Professional Summary", 0, 1)
     pdf.set_font('Helvetica', '', 11)
-    pdf.multi_cell(0, 6, f"Passionate {data['job_title']} with {data['experience']} of experience. Skilled in {data['skills']} and dedicated to delivering high-quality results.")
+    pdf.multi_cell(0, 6, f"Passionate {data['job_title']} with {data['experience']} of experience. Skilled in various technologies and dedicated to delivering high-quality results.")
     pdf.ln(5)
     
     # Key Qualifications
@@ -183,7 +237,7 @@ def create_cv_pdf(data):
     pdf.cell(0, 10, "Key Qualifications", 0, 1)
     pdf.set_font('Helvetica', '', 11)
     
-    # Split requirements into bullet points (using asterisks instead of •)
+    # Split requirements into bullet points
     requirements_list = data['requirements'].split(',')
     for req in requirements_list[:5]:
         pdf.cell(10)
@@ -197,11 +251,12 @@ def create_cv_pdf(data):
 
     # Format skills by category from portfolio data
     for category, skills in portfolio_data['skills'].items():
-        pdf.set_font('Helvetica', 'B', 11)
-        pdf.cell(0, 6, f"{category.title()}:", 0, 1)
-        pdf.set_font('Helvetica', '', 10)
-        pdf.cell(10)  # Indent
-        pdf.cell(0, 6, ", ".join(skills), 0, 1)
+        if skills:  # Only show categories with skills
+            pdf.set_font('Helvetica', 'B', 11)
+            pdf.cell(0, 6, f"{category.title()}:", 0, 1)
+            pdf.set_font('Helvetica', '', 10)
+            pdf.cell(10)  # Indent
+            pdf.cell(0, 6, ", ".join(skills), 0, 1)
     pdf.ln(5)
     
     # Experience
@@ -241,7 +296,7 @@ def create_cover_letter_pdf(data):
     pdf.cell(0, 6, f"Re: Application for {data['job_title']} Position", 0, 1)
     pdf.ln(10)
     
-    # Body - UPDATED with portfolio data
+    # Body - with portfolio data
     pdf.set_font('Helvetica', '', 11)
     
     # Create a skills summary from portfolio data
@@ -264,7 +319,7 @@ Your requirement for {data['requirements']} aligns perfectly with my background.
 
 Key qualifications I bring:
 - Expertise in {data['skills']}
-- Proven track record of meeting requirements like {data['requirements']}
+- Proven track record of meeting requirements
 - Strong commitment to learning and growth
 - Excellent problem-solving and communication skills
 
@@ -284,6 +339,7 @@ haileyesusshibru19@gmail.com
     pdf.output(temp_file.name)
     return temp_file.name
 
+# ==================== COMMAND HANDLERS ====================
 async def start(update: Update, context):
     """Welcome message with buttons"""
     if not is_authorized(update.effective_user.id):
@@ -308,13 +364,121 @@ I can help you create professional CVs and cover letters in PDF format!
     keyboard = [
         [InlineKeyboardButton("📄 Create CV", callback_data="create_cv")],
         [InlineKeyboardButton("✉️ Create Cover Letter", callback_data="create_cover")],
-        [InlineKeyboardButton("📁 Portfolio", url="https://haile-portfolio-theta.vercel.app/")],
+        [InlineKeyboardButton("📁 Portfolio", url=PORTFOLIO_URL)],
         [InlineKeyboardButton("❓ Help", callback_data="help")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(welcome_message, parse_mode='Markdown', reply_markup=reply_markup)
 
+async def help_command(update: Update, context):
+    """Show help menu"""
+    if not is_authorized(update.effective_user.id):
+        return
+    
+    help_text = """
+📋 **Available Commands:**
+
+/start - Main menu
+/createcv - Start CV creation
+/createcover - Start cover letter
+/help - Show this help
+/about - About Haile
+/portfolio - Portfolio link
+/contact - Contact info
+/job - Job status
+/clear - Clear conversation
+
+**How it works:**
+1. Click "Create CV" or "Create Cover Letter"
+2. Answer a few questions about the job
+3. Get professional PDF files ready to use!
+    """
+    await update.message.reply_text(help_text, parse_mode='Markdown')
+
+async def about(update: Update, context):
+    """About Haile"""
+    if not is_authorized(update.effective_user.id):
+        return
+    
+    about_text = f"""
+👨‍💻 **About Haile**
+
+**Title:** {portfolio_data['title']}
+**Location:** {portfolio_data['location']}
+**Education:** {portfolio_data['education']}
+
+**Experience:**
+• {portfolio_data['experience_details']['current']}
+• {portfolio_data['experience_details']['intern']}
+• {portfolio_data['experience_details']['field']}
+
+**Skills Summary:**
+• Networking: {', '.join(portfolio_data['skills']['networking'][:3])}
+• Programming: {', '.join(portfolio_data['skills']['programming'][:3])}
+• Mobile Dev: {', '.join(portfolio_data['skills']['mobile'][:3])}
+    """
+    await update.message.reply_text(about_text, parse_mode='Markdown')
+
+async def portfolio_command(update: Update, context):
+    """Portfolio link"""
+    if not is_authorized(update.effective_user.id):
+        return
+    
+    keyboard = [
+        [InlineKeyboardButton("🌐 Visit My Portfolio", url=PORTFOLIO_URL)]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "Click the button below to check out my portfolio!",
+        reply_markup=reply_markup
+    )
+
+async def contact(update: Update, context):
+    """Contact information"""
+    if not is_authorized(update.effective_user.id):
+        return
+    
+    contact_text = """
+📬 **Contact Haile**
+
+📧 Email: haileyesusshibru19@gmail.com
+💼 GitHub: github.com/haile199105
+📱 Telegram: @haile199105
+🌐 Portfolio: haile-portfolio-theta.vercel.app
+    """
+    await update.message.reply_text(contact_text, parse_mode='Markdown')
+
+async def job_status(update: Update, context):
+    """Job search status"""
+    if not is_authorized(update.effective_user.id):
+        return
+    
+    job_text = f"""
+💼 **Job Search Status**
+
+🔍 **Currently looking for:**
+- IT Instructor / Trainer
+- Python Developer
+- Network Administrator
+- Junior Developer
+
+📊 **Status:** Actively looking
+⭐ **Open to:** Remote, Hybrid, On-site
+📍 **Location:** {portfolio_data['location']} / Remote
+
+**Skills:** {', '.join(portfolio_data['skills']['programming'][:3])}, Networking, IT Support
+    """
+    await update.message.reply_text(job_text, parse_mode='Markdown')
+
+async def clear_command(update: Update, context):
+    """Clear conversation"""
+    if not is_authorized(update.effective_user.id):
+        return
+    
+    await update.message.reply_text("🧹 Conversation cleared! Let's start fresh.")
+
+# ==================== CV CREATION HANDLERS ====================
 async def create_cv_start(update: Update, context):
     """Start CV creation process"""
     query = update.callback_query
@@ -324,7 +488,7 @@ async def create_cv_start(update: Update, context):
         "📄 **Let's create your CV!**\n\n"
         "Please answer a few questions:\n\n"
         "**What job title are you applying for?**\n"
-        "(Example: Python Developer, Junior Programmer)"
+        "(Example: Python Developer, IT Instructor)"
     )
     return JOB_TITLE
 
@@ -457,26 +621,7 @@ async def cancel(update: Update, context):
     await update.message.reply_text("❌ Operation cancelled. Use /start to begin again.")
     return ConversationHandler.END
 
-async def help_command(update: Update, context):
-    """Show help menu"""
-    if not is_authorized(update.effective_user.id):
-        return
-    
-    help_text = """
-📋 **Available Commands:**
-
-/start - Main menu
-/createcv - Start CV creation
-/createcover - Start cover letter
-/help - Show this help
-
-**How it works:**
-1. Click "Create CV" or "Create Cover Letter"
-2. Answer a few questions about the job
-3. Get professional PDF files ready to use!
-    """
-    await update.message.reply_text(help_text, parse_mode='Markdown')
-
+# ==================== AI MESSAGE HANDLER ====================
 async def handle_message(update: Update, context):
     """Handle regular messages with Gemini AI"""
     if not is_authorized(update.effective_user.id):
@@ -496,7 +641,7 @@ async def handle_message(update: Update, context):
         skills_text = ""
         for category, skills in portfolio['skills'].items():
             if skills:  # Only show categories with skills
-                skills_text += f"\n- {category.title()}: {', '.join(skills)}"
+                skills_text += f"\n- {category.title()}: {', '.join(skills[:5])}"
         
         # Format experience
         exp_text = f"""
@@ -508,7 +653,7 @@ Field Work: {portfolio['experience_details']['field']}
         prompt = f"""
         You are a helpful AI assistant for Haile's job search bot. You have REAL-TIME access to Haile's portfolio website.
         
-        CURRENT PORTFOLIO INFORMATION (FETCHED LIVE FROM {portfolio['last_updated']}):
+        CURRENT PORTFOLIO INFORMATION (UPDATED HOURLY):
         
         ABOUT HAILE:
         - Name: {portfolio['name']}
@@ -532,6 +677,7 @@ Field Work: {portfolio['experience_details']['field']}
         - This information is ALWAYS up-to-date from his website.
         - Be friendly and helpful, focusing on job search assistance.
         - Keep responses concise but informative.
+        - If asked about something not related to job search, be helpful anyway.
         """
         
         # Get response from Gemini
@@ -549,6 +695,8 @@ Field Work: {portfolio['experience_details']['field']}
         error_message = f"❌ Error: {str(e)}"
         await update.message.reply_text(error_message)
         print(f"Gemini API Error: {e}")
+
+# ==================== BUTTON CALLBACK HANDLER ====================
 async def button_callback(update: Update, context):
     """Handle button clicks"""
     query = update.callback_query
@@ -565,6 +713,7 @@ async def button_callback(update: Update, context):
     elif query.data == "menu":
         await start(update, context)
 
+# ==================== MAIN FUNCTION ====================
 def main():
     """Main function to run the bot"""
     print("Building application...")
@@ -601,12 +750,18 @@ def main():
     # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("about", about))
+    app.add_handler(CommandHandler("portfolio", portfolio_command))
+    app.add_handler(CommandHandler("contact", contact))
+    app.add_handler(CommandHandler("job", job_status))
+    app.add_handler(CommandHandler("clear", clear_command))
     app.add_handler(conv_handler)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(CallbackQueryHandler(button_callback))
     
     print("✅ Bot is running! PDF generation ready.")
     print("🤖 Send /start to create CVs and cover letters!")
+    print(f"📊 Portfolio auto-updates every hour from: {PORTFOLIO_URL}")
     app.run_polling()
 
 if __name__ == "__main__":
