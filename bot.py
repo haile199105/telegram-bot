@@ -11,25 +11,36 @@ print(f"Python version: {sys.version}")
 TELEGRAM_TOKEN = os.environ.get('TOKEN')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 
-if TELEGRAM_TOKEN is None:
-    print("ERROR: TELEGRAM_TOKEN environment variable not set!")
+# Debug: Print if tokens are found (hiding most of the token for security)
+print(f"TELEGRAM_TOKEN found: {'Yes' if TELEGRAM_TOKEN else 'No'}")
+if TELEGRAM_TOKEN:
+    print(f"TELEGRAM_TOKEN starts with: {TELEGRAM_TOKEN[:5]}...")
+else:
+    print("ERROR: TELEGRAM_TOKEN is missing!")
     sys.exit(1)
 
-if GEMINI_API_KEY is None:
-    print("ERROR: GEMINI_API_KEY environment variable not set!")
-    sys.exit(1)
+print(f"GEMINI_API_KEY found: {'Yes' if GEMINI_API_KEY else 'No'}")
+if GEMINI_API_KEY:
+    print(f"GEMINI_API_KEY starts with: {GEMINI_API_KEY[:5]}...")
 else:
-    print(f"Gemini API Key loaded: {GEMINI_API_KEY[:5]}...{GEMINI_API_KEY[-5:]}")
+    print("ERROR: GEMINI_API_KEY is missing!")
+    sys.exit(1)
 
 # Configure Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')  # You can also use 'gemini-1.5-pro'
+try:
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    print("✅ Gemini configured successfully")
+except Exception as e:
+    print(f"❌ Gemini configuration error: {e}")
+    sys.exit(1)
 
 # Store conversation history for each user
 user_conversations = {}
 
 # Your Telegram ID for private access
-YOUR_ID = 123456789  # ⚠️ REPLACE WITH YOUR ACTUAL TELEGRAM ID!
+YOUR_ID = 6673503943  # ⚠️ REPLACE WITH YOUR ACTUAL TELEGRAM ID!
+print(f"Your Telegram ID set to: {YOUR_ID}")
 
 def is_authorized(user_id):
     """Check if user is authorized (only you)"""
@@ -229,7 +240,18 @@ async def button_callback(update: Update, context):
 def main():
     """Main function to run the bot"""
     print("Building application...")
-    app = Application.builder().token(TELEGRAM_TOKEN).build()
+    
+    # Verify token before building app
+    if not TELEGRAM_TOKEN:
+        print("❌ Cannot start: TELEGRAM_TOKEN is missing")
+        return
+    
+    try:
+        app = Application.builder().token(TELEGRAM_TOKEN).build()
+        print("✅ Application built successfully")
+    except Exception as e:
+        print(f"❌ Failed to build application: {e}")
+        return
     
     # Add command handlers
     app.add_handler(CommandHandler("start", start))
