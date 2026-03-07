@@ -489,21 +489,56 @@ async def handle_message(update: Update, context):
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
     
     try:
-        # Create a prompt for Gemini
-        prompt = f"""
-        You are a helpful AI assistant for a job search bot. 
-        The user's name is {user.first_name}.
+        # Get FRESH portfolio data
+        portfolio = get_portfolio_data()
         
+        # Format skills for the prompt
+        skills_text = ""
+        for category, skills in portfolio['skills'].items():
+            if skills:  # Only show categories with skills
+                skills_text += f"\n- {category.title()}: {', '.join(skills)}"
+        
+        # Format experience
+        exp_text = f"""
+Current: {portfolio['experience_details']['current']}
+Internship: {portfolio['experience_details']['intern']}
+Field Work: {portfolio['experience_details']['field']}
+        """
+        
+        prompt = f"""
+        You are a helpful AI assistant for Haile's job search bot. You have REAL-TIME access to Haile's portfolio website.
+        
+        CURRENT PORTFOLIO INFORMATION (FETCHED LIVE FROM {portfolio['last_updated']}):
+        
+        ABOUT HAILE:
+        - Name: {portfolio['name']}
+        - Title: {portfolio['title']}
+        - Location: {portfolio['location']}
+        - Education: {portfolio['education']}
+        
+        EXPERIENCE:
+        {exp_text}
+        
+        SKILLS BY CATEGORY:{skills_text}
+        
+        PROJECTS:
+        {', '.join(portfolio['projects'])}
+        
+        The user's name is {user.first_name}.
         User message: {user_message}
         
-        Respond in a friendly, helpful way. Keep responses concise but informative.
+        IMPORTANT: 
+        - When asked about Haile's skills, experience, or projects, use the information above.
+        - This information is ALWAYS up-to-date from his website.
+        - Be friendly and helpful, focusing on job search assistance.
+        - Keep responses concise but informative.
         """
         
         # Get response from Gemini
         response = model.generate_content(prompt)
         ai_response = response.text
         
-        # Send response (split if too long)
+        # Send response
         if len(ai_response) > 4000:
             for i in range(0, len(ai_response), 4000):
                 await update.message.reply_text(ai_response[i:i+4000])
@@ -514,7 +549,6 @@ async def handle_message(update: Update, context):
         error_message = f"❌ Error: {str(e)}"
         await update.message.reply_text(error_message)
         print(f"Gemini API Error: {e}")
-
 async def button_callback(update: Update, context):
     """Handle button clicks"""
     query = update.callback_query
