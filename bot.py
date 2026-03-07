@@ -69,16 +69,22 @@ def is_authorized(user_id):
     """Check if user is authorized (only you)"""
     return user_id == YOUR_ID
 
-# PDF Generator Class
+# PDF Generator Class with Unicode support
 class PDF(FPDF):
+    def __init__(self):
+        super().__init__()
+        # Add Unicode font support
+        self.add_font('DejaVu', '', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', uni=True)
+        self.add_font('DejaVu', 'B', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', uni=True)
+    
     def header(self):
-        self.set_font('Arial', 'B', 12)
+        self.set_font('DejaVu', 'B', 12)
         self.cell(0, 10, f'Job Application Documents - {datetime.now().strftime("%Y-%m-%d")}', 0, 1, 'C')
         self.ln(10)
     
     def footer(self):
         self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
+        self.set_font('DejaVu', 'I', 8)
         self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
 
 def create_cv_pdf(data):
@@ -87,14 +93,14 @@ def create_cv_pdf(data):
     pdf.add_page()
     
     # Title
-    pdf.set_font('Arial', 'B', 16)
+    pdf.set_font('DejaVu', 'B', 16)
     pdf.cell(0, 10, f"CV for {data['job_title']}", 0, 1, 'C')
     pdf.ln(10)
     
     # Personal Info
-    pdf.set_font('Arial', 'B', 12)
+    pdf.set_font('DejaVu', 'B', 12)
     pdf.cell(0, 10, "Personal Information", 0, 1)
-    pdf.set_font('Arial', '', 11)
+    pdf.set_font('DejaVu', '', 11)
     pdf.cell(0, 10, "Name: Haile", 0, 1)
     pdf.cell(0, 10, "Email: haileyesusshibru19@gmail.com", 0, 1)
     pdf.cell(0, 10, f"Position: {data['job_title']}", 0, 1)
@@ -102,28 +108,28 @@ def create_cv_pdf(data):
     pdf.ln(5)
     
     # Professional Summary
-    pdf.set_font('Arial', 'B', 12)
+    pdf.set_font('DejaVu', 'B', 12)
     pdf.cell(0, 10, "Professional Summary", 0, 1)
-    pdf.set_font('Arial', '', 11)
+    pdf.set_font('DejaVu', '', 11)
     pdf.multi_cell(0, 6, f"Passionate {data['job_title']} with {data['experience']} of experience. Skilled in {data['skills']} and dedicated to delivering high-quality results.")
     pdf.ln(5)
     
     # Key Qualifications
-    pdf.set_font('Arial', 'B', 12)
+    pdf.set_font('DejaVu', 'B', 12)
     pdf.cell(0, 10, "Key Qualifications", 0, 1)
-    pdf.set_font('Arial', '', 11)
+    pdf.set_font('DejaVu', '', 11)
     
-    # Split requirements into bullet points
+    # Split requirements into bullet points (using asterisks instead of •)
     requirements_list = data['requirements'].split(',')
     for req in requirements_list[:5]:
         pdf.cell(10)
-        pdf.cell(0, 6, f"• {req.strip()}", 0, 1)
+        pdf.cell(0, 6, f"- {req.strip()}", 0, 1)
     pdf.ln(5)
     
     # Technical Skills
-    pdf.set_font('Arial', 'B', 12)
+    pdf.set_font('DejaVu', 'B', 12)
     pdf.cell(0, 10, "Technical Skills", 0, 1)
-    pdf.set_font('Arial', '', 11)
+    pdf.set_font('DejaVu', '', 11)
     
     skills_list = data['skills'].split(',')
     skills_text = ", ".join([s.strip() for s in skills_list])
@@ -131,9 +137,9 @@ def create_cv_pdf(data):
     pdf.ln(5)
     
     # Experience
-    pdf.set_font('Arial', 'B', 12)
+    pdf.set_font('DejaVu', 'B', 12)
     pdf.cell(0, 10, "Experience", 0, 1)
-    pdf.set_font('Arial', '', 11)
+    pdf.set_font('DejaVu', '', 11)
     pdf.multi_cell(0, 6, f"• {data['experience']} of relevant experience")
     pdf.multi_cell(0, 6, "• Developed projects demonstrating expertise in required technologies")
     pdf.multi_cell(0, 6, "• Collaborated with teams to deliver solutions meeting client requirements")
@@ -149,12 +155,12 @@ def create_cover_letter_pdf(data):
     pdf.add_page()
     
     # Title
-    pdf.set_font('Arial', 'B', 16)
+    pdf.set_font('DejaVu', 'B', 16)
     pdf.cell(0, 10, "Cover Letter", 0, 1, 'C')
     pdf.ln(10)
     
     # Date
-    pdf.set_font('Arial', '', 11)
+    pdf.set_font('DejaVu', '', 11)
     pdf.cell(0, 6, datetime.now().strftime("%B %d, %Y"), 0, 1)
     pdf.ln(10)
     
@@ -163,12 +169,12 @@ def create_cover_letter_pdf(data):
     pdf.ln(10)
     
     # Subject
-    pdf.set_font('Arial', 'B', 11)
+    pdf.set_font('DejaVu', 'B', 11)
     pdf.cell(0, 6, f"Re: Application for {data['job_title']} Position", 0, 1)
     pdf.ln(10)
     
     # Body
-    pdf.set_font('Arial', '', 11)
+    pdf.set_font('DejaVu', '', 11)
     body = f"""
 Dear Hiring Manager,
 
@@ -177,10 +183,10 @@ I am writing to express my strong interest in the {data['job_title']} position a
 Your requirement for {data['requirements']} aligns perfectly with my background. I have {data['experience']} of experience developing solutions and working with teams to deliver high-quality results.
 
 Key qualifications I bring:
-• Expertise in {data['skills']}
-• Proven track record of meeting requirements
-• Strong commitment to learning and growth
-• Excellent problem-solving and communication skills
+- Expertise in {data['skills']}
+- Proven track record of meeting requirements
+- Strong commitment to learning and growth
+- Excellent problem-solving and communication skills
 
 I would welcome the opportunity to discuss how my skills and experience align with {data['company']}'s needs. Thank you for considering my application.
 
