@@ -164,7 +164,7 @@ def create_cv_pdf(data):
     pdf.cell(0, 10, f"CV for {data['job_title']}", 0, 1, 'C')
     pdf.ln(10)
     
-   # Personal Info
+  # Personal Info (using portfolio data)
 pdf.set_font('DejaVu', 'B', 12)
 pdf.cell(0, 10, "Personal Information", 0, 1)
 pdf.set_font('DejaVu', '', 11)
@@ -173,6 +173,8 @@ pdf.cell(0, 10, f"Title: {portfolio_data['title']}", 0, 1)
 pdf.cell(0, 10, f"Location: {portfolio_data['location']}", 0, 1)
 pdf.cell(0, 10, f"Education: {portfolio_data['education']}", 0, 1)
 pdf.cell(0, 10, f"Email: haileyesusshibru19@gmail.com", 0, 1)
+pdf.cell(0, 10, f"Position: {data['job_title']}", 0, 1)
+pdf.cell(0, 10, f"Company: {data['company']}", 0, 1)
     
     # Professional Summary
     pdf.set_font('DejaVu', 'B', 12)
